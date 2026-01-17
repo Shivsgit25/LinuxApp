@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TermiPhone - Web Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #00FF00;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .terminal {
+            padding: 20px;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        
+        .input-line {
+            display: flex;
+            align-items: center;
+        }
+        
+        .prompt {
+            color: #00FF00;
+            margin-right: 5px;
+        }
+        
+        #input {
+            background: transparent;
+            border: none;
+            color: #00FF00;
+            font-family: inherit;
+            font-size: inherit;
+            outline: none;
+            flex: 1;
+        }
+        
+        .cursor {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .output {
+            white-space: pre-wrap;
+            margin: 5px 0;
+        }
+        
+        .error {
+            color: #FF0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal" id="terminal">
+        <div class="output">TermiPhone v1.0 - Web Demo
+user@phone:~$ </div>
+        <div class="input-line">
+            <span class="prompt">user@phone:~$ </span>
+            <input type="text" id="input" autofocus>
+            <span class="cursor">_</span>
+        </div>
+    </div>
+
+    <script>
+        const terminal = document.getElementById('terminal');
+        const input = document.getElementById('input');
+        const history = [];
+        let historyIndex = -1;
+
+        const commands = {
+            help: () => `TermiPhone v1.0 - Available Commands:
+
+SYSTEM:
+  help                    Show this help
+  clear                   Clear terminal
+  whoami                  Show current user
+  date                    Show current date
+  time                    Show current time
+  battery                 Show battery level
+
+THEME:
+  theme set hacker-green  Default green theme
+  theme set cyberpunk     Cyberpunk theme
+  theme set nord          Nord theme
+
+APPS:
+  apps list               List apps
+  open chrome             Open Chrome
+  open youtube            Open YouTube
+
+COMMUNICATION:
+  call mom                Call mom
+  sms mom hello           Send SMS
+
+Type any command to try it!`,
+
+            clear: () => {
+                terminal.innerHTML = '<div class="input-line"><span class="prompt">user@phone:~$ </span><input type="text" id="input" autofocus><span class="cursor">_</span></div>';
+                document.getElementById('input').focus();
+                return '';
+            },
+
+            whoami: () => 'user@phone',
+            date: () => new Date().toDateString(),
+            time: () => new Date().toLocaleTimeString(),
+            battery: () => 'Battery: 85%',
+
+            'theme': (args) => {
+                if (args[0] === 'set') {
+                    const theme = args[1];
+                    if (theme === 'cyberpunk') {
+                        document.body.style.background = '#0d1117';
+                        document.body.style.color = '#ff00ff';
+                        return 'Theme set to: cyberpunk';
+                    } else if (theme === 'nord') {
+                        document.body.style.background = '#2e3440';
+                        document.body.style.color = '#d8dee9';
+                        return 'Theme set to: nord';
+                    } else if (theme === 'hacker-green') {
+                        document.body.style.background = '#000';
+                        document.body.style.color = '#00FF00';
+                        return 'Theme set to: hacker-green';
+                    }
+                }
+                return 'Usage: theme set <hacker-green|cyberpunk|nord>';
+            },
+
+            'apps': (args) => {
+                if (args[0] === 'list') {
+                    return `Chrome          com.android.chrome
+YouTube         com.google.android.youtube
+WhatsApp        com.whatsapp
+Spotify         com.spotify.music
+Gmail           com.google.android.gm`;
+                }
+                return 'Usage: apps list';
+            },
+
+            'open': (args) => {
+                const app = args[0];
+                if (app) {
+                    window.open(`https://${app}.com`, '_blank');
+                    return `Opening ${app}...`;
+                }
+                return 'Usage: open <app>';
+            },
+
+            'call': (args) => {
+                const contact = args[0] || 'unknown';
+                return `Calling ${contact}... (Demo mode - no actual call)`;
+            },
+
+            'sms': (args) => {
+                const contact = args[0] || 'unknown';
+                const message = args.slice(1).join(' ') || 'hello';
+                return `SMS sent to ${contact}: "${message}" (Demo mode)`;
+            }
+        };
+
+        function executeCommand(cmd) {
+            const parts = cmd.trim().split(' ');
+            const command = parts[0];
+            const args = parts.slice(1);
+
+            if (commands[command]) {
+                return commands[command](args);
+            } else if (cmd.trim() === '') {
+                return '';
+            } else {
+                return `Command not found: ${command}. Type 'help' for available commands.`;
+            }
+        }
+
+        function addOutput(text, isError = false) {
+            if (text) {
+                const output = document.createElement('div');
+                output.className = isError ? 'output error' : 'output';
+                output.textContent = text;
+                terminal.insertBefore(output, terminal.lastElementChild);
+            }
+        }
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const cmd = input.value;
+                
+                // Add command to terminal
+                const cmdLine = document.createElement('div');
+                cmdLine.className = 'output';
+                cmdLine.textContent = `user@phone:~$ ${cmd}`;
+                terminal.insertBefore(cmdLine, terminal.lastElementChild);
+
+                // Execute command
+                if (cmd.trim()) {
+                    history.push(cmd);
+                    historyIndex = -1;
+                    
+                    const result = executeCommand(cmd);
+                    if (result) {
+                        addOutput(result);
+                    }
+                }
+
+                input.value = '';
+                terminal.scrollTop = terminal.scrollHeight;
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (historyIndex < history.length - 1) {
+                    historyIndex++;
+                    input.value = history[history.length - 1 - historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    input.value = history[history.length - 1 - historyIndex];
+                } else if (historyIndex === 0) {
+                    historyIndex = -1;
+                    input.value = '';
+                }
+            }
+        });
+
+        // Keep input focused
+        document.addEventListener('click', () => input.focus());
+        input.focus();
+    </script>
+</body>
+</html>

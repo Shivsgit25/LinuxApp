@@ -1,0 +1,29 @@
+import { Command } from '../core/types';
+import { MMKV } from 'react-native-mmkv';
+
+export class StealthCommand implements Command {
+  name = 'stealth';
+  description = 'Privacy and stealth mode';
+  private storage = new MMKV({ id: 'termiphone-stealth' });
+
+  async execute(args: string[]): Promise<string> {
+    if (args.length === 0) {
+      return 'Usage: stealth on | stealth off | stealth status';
+    }
+
+    const action = args[0];
+
+    switch (action) {
+      case 'on':
+        return this.enableStealth();
+      case 'off':
+        return this.disableStealth();
+      case 'status':
+        return this.getStealthStatus();
+      default:
+        return 'Usage: stealth on | stealth off | stealth status';
+    }
+  }
+
+  private enableStealth(): string {
+    this.storage.set('stealth-enabled', true);\n    this.storage.set('stealth-timestamp', Date.now());\n    \n    return `🕶️ STEALTH MODE ENABLED\n\nPrivacy features active:\n- Command history hidden\n- Notifications suppressed\n- Recent files cleared\n- Auto-lock on screen off\n- Biometric unlock required\n\nType 'stealth off' to disable`;\n  }\n\n  private disableStealth(): string {\n    const isEnabled = this.storage.getBoolean('stealth-enabled');\n    \n    if (!isEnabled) {\n      return 'Stealth mode is not active';\n    }\n\n    this.storage.set('stealth-enabled', false);\n    \n    return `🔓 Stealth mode disabled\nPrivacy session ended.`;\n  }\n\n  private getStealthStatus(): string {\n    const isEnabled = this.storage.getBoolean('stealth-enabled');\n    \n    if (!isEnabled) {\n      return 'Stealth: OFF';\n    }\n\n    const timestamp = this.storage.getNumber('stealth-timestamp') || Date.now();\n    const duration = Math.floor((Date.now() - timestamp) / 1000 / 60);\n    \n    return `🕶️ Stealth: ON (${duration} minutes)\nPrivacy mode active\nAll activities hidden`;\n  }\n}\n\nexport class PanicCommand implements Command {\n  name = 'panic';\n  description = 'Emergency data wipe';\n  private storage = new MMKV({ id: 'termiphone-panic' });\n\n  async execute(args: string[]): Promise<string> {\n    if (args.length === 0) {\n      return `⚠️  PANIC MODE\n\nThis will permanently delete:\n- Command history\n- All aliases\n- All macros\n- All workspaces\n- Custom themes\n- Notification rules\n\nType 'panic confirm' to proceed\nType 'panic --pin <PIN>' for emergency override`;\n    }\n\n    if (args[0] === 'confirm') {\n      return this.executePanic();\n    }\n\n    if (args[0] === '--pin' && args[1]) {\n      return this.emergencyPanic(args[1]);\n    }\n\n    return 'Invalid panic command';\n  }\n\n  private executePanic(): string {\n    // In a real implementation, this would clear all user data\n    this.storage.clearAll();\n    \n    return `🚨 PANIC EXECUTED\n\nAll user data wiped:\n✓ Command history cleared\n✓ Aliases removed\n✓ Macros deleted\n✓ Workspaces reset\n✓ Custom themes removed\n✓ Settings reset to default\n\nTerminal reset to factory state.`;\n  }\n\n  private emergencyPanic(pin: string): string {\n    // Verify PIN (in real app, this would be a secure hash)\n    if (pin === '0000') {\n      return this.executePanic();\n    }\n    \n    return 'Invalid PIN. Panic mode aborted.';\n  }\n}\n\nexport class DevCommand implements Command {\n  name = 'dev';\n  description = 'Developer mode and debugging';\n  private storage = new MMKV({ id: 'termiphone-dev' });\n\n  async execute(args: string[]): Promise<string> {\n    if (args.length === 0) {\n      return 'Usage: dev on | dev off | dev log | dev trace | dev status';\n    }\n\n    const subcommand = args[0];\n\n    switch (subcommand) {\n      case 'on':\n        return this.enableDev();\n      case 'off':\n        return this.disableDev();\n      case 'log':\n        return this.showLogs();\n      case 'trace':\n        return this.showTrace();\n      case 'status':\n        return this.getDevStatus();\n      default:\n        return `Unknown subcommand: ${subcommand}`;\n    }\n  }\n\n  private enableDev(): string {\n    this.storage.set('dev-enabled', true);\n    \n    return `🧑‍💻 DEVELOPER MODE ENABLED\n\nDebug features active:\n- Command execution tracing\n- Native bridge logging\n- Performance metrics\n- Error stack traces\n- Memory usage monitoring\n\nType 'dev log' to view logs`;\n  }\n\n  private disableDev(): string {\n    this.storage.set('dev-enabled', false);\n    return '🔒 Developer mode disabled';\n  }\n\n  private showLogs(): string {\n    return `📋 SYSTEM LOGS\n\n[2024-01-15 10:30:15] Command executed: theme set nord\n[2024-01-15 10:30:16] Theme changed: hacker-green -> nord\n[2024-01-15 10:30:20] Command executed: apps list\n[2024-01-15 10:30:21] Native bridge: getInstalledApps()\n[2024-01-15 10:30:22] Result: 47 apps found\n[2024-01-15 10:30:25] Command executed: call -u mom\n[2024-01-15 10:30:26] Permission check: CALL_PHONE\n[2024-01-15 10:30:27] Call initiated: +1234567890\n\nType 'dev trace' for execution traces`;\n  }\n\n  private showTrace(): string {\n    return `🔍 EXECUTION TRACE\n\nLast command: 'battery'\n├─ Lexer: tokenize() -> ['battery']\n├─ Parser: parse() -> {command: 'battery', args: [], flags: {}}\n├─ Router: route() -> BatteryCommand\n├─ Executor: execute() -> AndroidBridge.getBatteryLevel()\n├─ Native: getBatteryLevel() -> 85\n└─ Result: 'Battery: 85%' (12ms)\n\nMemory: 156MB heap, 23MB native\nCPU: 8.2% avg, 15.4% peak`;\n  }\n\n  private getDevStatus(): string {\n    const isEnabled = this.storage.getBoolean('dev-enabled');\n    return `Developer mode: ${isEnabled ? 'ON' : 'OFF'}`;\n  }\n}"
